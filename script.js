@@ -358,6 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function checkCaptures() {
     let toRemove = []
 
+    // Mevcut yakalama mantığı
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x < 7; x++) {
         let cell = board[y][x]
@@ -367,27 +368,20 @@ document.addEventListener("DOMContentLoaded", () => {
             let currentX = x + dir.x
             let currentY = y + dir.y
 
-            // İki rakip parça veya duvar arasında yakalama kontrolü
-            if (isValidCell(currentX, currentY)) {
-              let nextCell = board[currentY][currentX]
-              if (nextCell.piece === opponentPiece) {
-                let beyondX = currentX + dir.x
-                let beyondY = currentY + dir.y
+            if (
+              isValidCell(currentX, currentY) &&
+              board[currentY][currentX].piece === opponentPiece
+            ) {
+              let beyondX = currentX + dir.x
+              let beyondY = currentY + dir.y
 
-                if (isValidCell(beyondX, beyondY)) {
-                  let beyondCell = board[beyondY][beyondX]
-                  if (beyondCell.piece === cell.piece) {
-                    toRemove.push({ x: currentX, y: currentY })
-                  }
-                } else {
-                  // Duvara karşı yakalama
+              if (isValidCell(beyondX, beyondY)) {
+                let beyondCell = board[beyondY][beyondX]
+                if (beyondCell.piece === cell.piece) {
                   toRemove.push({ x: currentX, y: currentY })
                 }
-              }
-            } else {
-              // Duvara karşı yakalama
-              if (cell.piece === opponentPiece) {
-                toRemove.push({ x: x, y: y })
+              } else {
+                toRemove.push({ x: currentX, y: currentY })
               }
             }
           })
@@ -395,13 +389,70 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Yakalanan parçaları kaldır
+    // Yeni yakalama mantığı: CTTC ve TCCT dizilimlerini kontrol et
+    // Yatay kontrol
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x <= 7 - 4; x++) {
+        let cell1 = board[y][x]
+        let cell2 = board[y][x + 1]
+        let cell3 = board[y][x + 2]
+        let cell4 = board[y][x + 3]
+        if (
+          cell1.piece &&
+          cell2.piece &&
+          cell3.piece &&
+          cell4.piece &&
+          cell1.piece !== cell2.piece &&
+          cell1.piece === cell4.piece &&
+          cell2.piece === cell3.piece &&
+          cell1.piece !== cell2.piece
+        ) {
+          // Aradaki iki taşı kaldır
+          toRemove.push({ x: x + 1, y: y })
+          toRemove.push({ x: x + 2, y: y })
+        }
+      }
+    }
+
+    // Dikey kontrol
+    for (let x = 0; x < 7; x++) {
+      for (let y = 0; y <= 7 - 4; y++) {
+        let cell1 = board[y][x]
+        let cell2 = board[y + 1][x]
+        let cell3 = board[y + 2][x]
+        let cell4 = board[y + 3][x]
+        if (
+          cell1.piece &&
+          cell2.piece &&
+          cell3.piece &&
+          cell4.piece &&
+          cell1.piece !== cell2.piece &&
+          cell1.piece === cell4.piece &&
+          cell2.piece === cell3.piece &&
+          cell1.piece !== cell2.piece
+        ) {
+          // Aradaki iki taşı kaldır
+          toRemove.push({ x: x, y: y + 1 })
+          toRemove.push({ x: x, y: y + 2 })
+        }
+      }
+    }
+
+    // Aynı taşı birden fazla kez kaldırmamak için benzersiz pozisyonları filtrele
+    let uniqueToRemove = []
     toRemove.forEach((pos) => {
+      if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
+        uniqueToRemove.push(pos)
+      }
+    })
+
+    // Yakalanan parçaları kaldır
+    uniqueToRemove.forEach((pos) => {
       removePiece(pos.x, pos.y)
     })
 
     // Eğer taşlar yakalandıysa captureSound çal
-    if (toRemove.length > 0 && !isMuted) {
+    if (uniqueToRemove.length > 0 && !isMuted) {
       captureSound.play()
     }
   }
@@ -577,12 +628,122 @@ document.addEventListener("DOMContentLoaded", () => {
     let pieceType = newBoard[move.from.y][move.from.x].piece
     newBoard[move.from.y][move.from.x].piece = null
     newBoard[move.to.y][move.to.x].piece = pieceType
+
+    // Hamleden sonra yakalamaları kontrol et
+    newBoard = checkCapturesOnBoard(newBoard)
     return newBoard
   }
 
+  function checkCapturesOnBoard(boardState) {
+    let toRemove = []
+
+    // Mevcut yakalama mantığı
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        let cell = boardState[y][x]
+        if (cell.piece) {
+          let opponentPiece = cell.piece === "triangle" ? "circle" : "triangle"
+          directions.forEach((dir) => {
+            let currentX = x + dir.x
+            let currentY = y + dir.y
+
+            if (
+              isValidCell(currentX, currentY) &&
+              boardState[currentY][currentX].piece === opponentPiece
+            ) {
+              let beyondX = currentX + dir.x
+              let beyondY = currentY + dir.y
+
+              if (isValidCell(beyondX, beyondY)) {
+                let beyondCell = boardState[beyondY][beyondX]
+                if (beyondCell.piece === cell.piece) {
+                  toRemove.push({ x: currentX, y: currentY })
+                }
+              } else {
+                toRemove.push({ x: currentX, y: currentY })
+              }
+            }
+          })
+        }
+      }
+    }
+
+    // Yeni yakalama mantığı: CTTC ve TCCT dizilimlerini kontrol et
+    // Yatay kontrol
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x <= 7 - 4; x++) {
+        let cell1 = boardState[y][x]
+        let cell2 = boardState[y][x + 1]
+        let cell3 = boardState[y][x + 2]
+        let cell4 = boardState[y][x + 3]
+        if (
+          cell1.piece &&
+          cell2.piece &&
+          cell3.piece &&
+          cell4.piece &&
+          cell1.piece !== cell2.piece &&
+          cell1.piece === cell4.piece &&
+          cell2.piece === cell3.piece &&
+          cell1.piece !== cell2.piece
+        ) {
+          // Aradaki iki taşı kaldır
+          toRemove.push({ x: x + 1, y: y })
+          toRemove.push({ x: x + 2, y: y })
+        }
+      }
+    }
+
+    // Dikey kontrol
+    for (let x = 0; x < 7; x++) {
+      for (let y = 0; y <= 7 - 4; y++) {
+        let cell1 = boardState[y][x]
+        let cell2 = boardState[y + 1][x]
+        let cell3 = boardState[y + 2][x]
+        let cell4 = boardState[y + 3][x]
+        if (
+          cell1.piece &&
+          cell2.piece &&
+          cell3.piece &&
+          cell4.piece &&
+          cell1.piece !== cell2.piece &&
+          cell1.piece === cell4.piece &&
+          cell2.piece === cell3.piece &&
+          cell1.piece !== cell2.piece
+        ) {
+          // Aradaki iki taşı kaldır
+          toRemove.push({ x: x, y: y + 1 })
+          toRemove.push({ x: x, y: y + 2 })
+        }
+      }
+    }
+
+    // Aynı taşı birden fazla kez kaldırmamak için benzersiz pozisyonları filtrele
+    let uniqueToRemove = []
+    toRemove.forEach((pos) => {
+      if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
+        uniqueToRemove.push(pos)
+      }
+    })
+
+    // Yakalanan parçaları kaldır
+    uniqueToRemove.forEach((pos) => {
+      boardState[pos.y][pos.x].piece = null
+    })
+
+    return boardState
+  }
+
   function isGameOver(boardState) {
-    let aiPieces = getPlayerPieces("triangle").length
-    let humanPieces = getPlayerPieces("circle").length
+    let aiPieces = 0
+    let humanPieces = 0
+
+    boardState.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell.piece === "triangle") aiPieces++
+        if (cell.piece === "circle") humanPieces++
+      })
+    })
+
     return aiPieces === 0 || humanPieces === 0 || moveCount >= 50
   }
 
