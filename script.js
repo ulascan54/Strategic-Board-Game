@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const rulesModal = document.getElementById("rulesModal")
   const closeRulesButton = document.getElementById("closeRulesButton")
 
+  // Get the play overlay
+  const playOverlay = document.getElementById("playOverlay")
+
   // Event listener to open the modal
   openRulesButton.addEventListener("click", () => {
     rulesModal.style.display = "block"
@@ -30,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let isMuted = false
 
-  // Ses dosyaları
+  // Sound files
   const backgroundMusic = new Audio("sound1.mp3")
   backgroundMusic.loop = true
   backgroundMusic.volume = 0.01
@@ -40,15 +43,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let board = []
   let moveHistory = []
-  let currentPlayer = "human" // 'human' veya 'ai'
+  let currentPlayer = "ai" // AI starts first
   let moveCount = 0
   let gameEnded = false
+  let gameStarted = false
 
   const directions = [
-    { x: 0, y: -1 }, // Yukarı
-    { x: 1, y: 0 }, // Sağ
-    { x: 0, y: 1 }, // Aşağı
-    { x: -1, y: 0 }, // Sol
+    { x: 0, y: -1 }, // Up
+    { x: 1, y: 0 }, // Right
+    { x: 0, y: 1 }, // Down
+    { x: -1, y: 0 }, // Left
   ]
 
   function initBoard() {
@@ -60,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let cell = {
           x: x,
           y: y,
-          piece: null, // 'triangle', 'circle' veya null
+          piece: null, // 'triangle', 'circle' or null
         }
         let cellElement = document.createElement("div")
         cellElement.classList.add("cell")
@@ -73,10 +77,14 @@ document.addEventListener("DOMContentLoaded", () => {
       board.push(row)
     }
     initPieces()
+
+    // Show the PLAY overlay
+    playOverlay.style.display = "flex"
+    gameStarted = false
   }
 
   function initPieces() {
-    // Taşların başlangıç konumları
+    // Initial positions of the pieces
     let aiPositions = [
       { x: 0, y: 0 },
       { x: 0, y: 2 },
@@ -126,7 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
     placePiece(toX, toY, pieceType, pieceId)
     addMoveToHistory(pieceType, fromX, fromY, toX, toY)
 
-    // Taş hareket ettiğinde moveSound çal
+    // Play moveSound when a piece is moved
     if (!isMuted) {
       moveSound.play()
     }
@@ -134,16 +142,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function addMoveToHistory(pieceType, fromX, fromY, toX, toY) {
     moveHistory.push({
-      player: pieceType === "triangle" ? "AI" : "İnsan",
+      player: pieceType === "triangle" ? "AI" : "Human",
       pieceType: pieceType,
       from: { x: fromX, y: fromY },
       to: { x: toX, y: toY },
     })
     let moveText = `${moveHistory.length}. ${
-      pieceType === "triangle" ? "AI" : "İnsan"
-    } (${fromX},${fromY}) konumundan (${toX},${toY}) konumuna hareket etti`
+      pieceType === "triangle" ? "AI" : "Human"
+    } moved from (${fromX},${fromY}) to (${toX},${toY})`
 
-    // Önceki son hamleden 'last-move' sınıfını kaldır
+    // Remove 'last-move' class from the previous last move
     const previousLastMove = historyList.querySelector(".last-move")
     if (previousLastMove) {
       previousLastMove.classList.remove("last-move")
@@ -152,19 +160,19 @@ document.addEventListener("DOMContentLoaded", () => {
     let li = document.createElement("li")
     li.textContent = moveText
 
-    // Hamleyi yapan oyuncuya göre CSS sınıfı ekle
+    // Add CSS class based on the player who made the move
     if (pieceType === "triangle") {
       li.classList.add("ai-move")
     } else {
       li.classList.add("human-move")
     }
 
-    // Son hamleyi vurgulamak için 'last-move' sınıfını ekle
+    // Add 'last-move' class to highlight the last move
     li.classList.add("last-move")
 
     historyList.appendChild(li)
 
-    // Hamle geçmişi bölümünü en alta kaydır
+    // Scroll the move history to the bottom
     historyList.scrollTop = historyList.scrollHeight
   }
 
@@ -211,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleCellClick(event) {
-      if (gameEnded) return
+      if (gameEnded || !gameStarted) return
       let x = parseInt(event.currentTarget.dataset.x)
       let y = parseInt(event.currentTarget.dataset.y)
       let cell = board[y][x]
@@ -221,10 +229,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let pieceId = pieceElement.dataset.id
 
         if (selectedPiece && selectedPiece.x === x && selectedPiece.y === y) {
-          // Aynı parçaya tekrar tıklanırsa seçim kaldırılır
+          // Deselect the same piece if clicked again
           deselectPiece()
         } else if (!movedPieces.includes(pieceId)) {
-          // Yeni bir parça seçilir
+          // Select a new piece
           deselectPiece()
           selectedPiece = { x: x, y: y, id: pieceId }
           if (pieceElement) {
@@ -233,17 +241,17 @@ document.addEventListener("DOMContentLoaded", () => {
           availableMoves = getAvailableMoves(x, y)
           highlightAvailableMoves()
         } else {
-          // Bu parça bu turda zaten hareket etti
+          // This piece has already moved this turn
           if (!isMuted) {
             invalidMoveSound.play()
           }
-          alert("Aynı taşı aynı turda iki kez hareket ettiremezsiniz.")
+          alert("You cannot move the same piece twice in a single turn.")
         }
       } else if (
         selectedPiece &&
         cell.element.classList.contains("available")
       ) {
-        // Seçilen parça hareket ettirilir
+        // Move the selected piece
         movePiece(selectedPiece.x, selectedPiece.y, x, y)
         movedPieces.push(selectedPiece.id)
         deselectPiece()
@@ -259,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
           detachEventListeners()
           aiMove()
         } else {
-          // Seçimi sıfırlayarak oyuncunun başka bir parça seçmesine izin ver
+          // Reset selection to allow the player to choose another piece
           deselectPiece()
         }
       } else {
@@ -287,13 +295,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function aiMove() {
+    if (!gameStarted) return
     let aiPieces = getPlayerPieces("triangle")
     let movesNeeded = aiPieces.length > 1 ? 2 : 1
     let movesMade = 0
     let movedPieces = []
 
     function makeMove() {
-      if (gameEnded) return
+      if (gameEnded || !gameStarted) return
       let bestMove = minimax(
         board,
         parseInt(difficultySelect.value),
@@ -303,10 +312,10 @@ document.addEventListener("DOMContentLoaded", () => {
         movedPieces
       )
       if (bestMove && bestMove.move) {
-        // AI'nin farklı parçaları hareket ettirmesini sağlar
+        // Ensure AI moves different pieces
         let pieceId = getPieceId(bestMove.move.from.x, bestMove.move.from.y)
         if (movedPieces.includes(pieceId)) {
-          // Başka bir parça ile alternatif bir hareket bulun
+          // Find an alternative move with a different piece
           let alternativeMoves = getAllPossibleMoves(board, "triangle").filter(
             (move) =>
               !movedPieces.includes(getPieceId(move.from.x, move.from.y))
@@ -314,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (alternativeMoves.length > 0) {
             bestMove.move = alternativeMoves[0]
           } else {
-            // Başka hareket yok, bu turda daha fazla hamle yapamaz
+            // No more moves this turn
             currentPlayer = "human"
             humanMove()
             return
@@ -333,18 +342,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (gameEnded) return
         movesMade++
         if (movesMade < movesNeeded) {
-          setTimeout(makeMove, 500) // AI hamleleri arasında kısa bir bekleme
+          setTimeout(makeMove, 500) // Short delay between AI moves
         } else {
           currentPlayer = "human"
           humanMove()
         }
       } else {
         gameEnded = true
-        alert("AI hareket edemiyor. Kazandınız!")
+        alert("AI cannot move. You win!")
       }
     }
 
-    setTimeout(makeMove, 500) // AI hamlesini kısa bir gecikmeden sonra başlat
+    setTimeout(makeMove, 500) // Start AI move after a short delay
   }
 
   function getPieceId(x, y) {
@@ -358,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function checkCaptures() {
     let toRemove = []
 
-    // Mevcut yakalama mantığı
+    // Existing capture logic
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x < 7; x++) {
         let cell = board[y][x]
@@ -389,8 +398,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Yeni yakalama mantığı: CTTC ve TCCT dizilimlerini kontrol et
-    // Yatay kontrol
+    // New capture logic: Check for CTTC and TCCT patterns
+    // Horizontal check
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x <= 7 - 4; x++) {
         let cell1 = board[y][x]
@@ -407,14 +416,14 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Aradaki iki taşı kaldır
+          // Remove the two middle pieces
           toRemove.push({ x: x + 1, y: y })
           toRemove.push({ x: x + 2, y: y })
         }
       }
     }
 
-    // Dikey kontrol
+    // Vertical check
     for (let x = 0; x < 7; x++) {
       for (let y = 0; y <= 7 - 4; y++) {
         let cell1 = board[y][x]
@@ -431,14 +440,14 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Aradaki iki taşı kaldır
+          // Remove the two middle pieces
           toRemove.push({ x: x, y: y + 1 })
           toRemove.push({ x: x, y: y + 2 })
         }
       }
     }
 
-    // Aynı taşı birden fazla kez kaldırmamak için benzersiz pozisyonları filtrele
+    // Filter unique positions to avoid removing the same piece multiple times
     let uniqueToRemove = []
     toRemove.forEach((pos) => {
       if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
@@ -446,12 +455,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     })
 
-    // Yakalanan parçaları kaldır
+    // Remove captured pieces
     uniqueToRemove.forEach((pos) => {
       removePiece(pos.x, pos.y)
     })
 
-    // Eğer taşlar yakalandıysa captureSound çal
+    // Play captureSound if pieces were captured
     if (uniqueToRemove.length > 0 && !isMuted) {
       captureSound.play()
     }
@@ -491,24 +500,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function evaluatePiece(cell, boardState, pieceType) {
-    let score = 10 // Her taşın temel değeri
+    let score = 10 // Base value for each piece
     let opponentType = pieceType === "triangle" ? "circle" : "triangle"
 
-    // Taşın etrafındaki hücreleri kontrol et
+    // Check the cells around the piece
     directions.forEach((dir) => {
       let x = cell.x + dir.x
       let y = cell.y + dir.y
       if (isValidCell(x, y)) {
         let neighbor = boardState[y][x]
         if (neighbor.piece === opponentType) {
-          // Rakip taş yanındaysa, risk altında
+          // At risk if an opponent's piece is adjacent
           score -= 2
         } else if (neighbor.piece === pieceType) {
-          // Kendi taşımız yanındaysa, daha güvenli
+          // Safer if an ally is adjacent
           score += 1
         }
       } else {
-        // Kenardaki taşlar daha riskli olabilir
+        // Edge pieces might be riskier
         score -= 1
       }
     })
@@ -533,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
       isMaximizingPlayer ? "triangle" : "circle"
     )
 
-    // Filtreleme: Aynı taşı iki kez hareket ettirmeyelim
+    // Filter to avoid moving the same piece twice
     moves = moves.filter(
       (move) => !movedPieces.includes(getPieceId(move.from.x, move.from.y))
     )
@@ -566,7 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         alpha = Math.max(alpha, maxEval)
         if (beta <= alpha) {
-          break // Beta kesmesi
+          break // Beta cutoff
         }
       }
       return { score: maxEval, move: bestMove }
@@ -592,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         beta = Math.min(beta, minEval)
         if (beta <= alpha) {
-          break // Alfa kesmesi
+          break // Alpha cutoff
         }
       }
       return { score: minEval, move: bestMove }
@@ -629,7 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
     newBoard[move.from.y][move.from.x].piece = null
     newBoard[move.to.y][move.to.x].piece = pieceType
 
-    // Hamleden sonra yakalamaları kontrol et
+    // Check for captures after the move
     newBoard = checkCapturesOnBoard(newBoard)
     return newBoard
   }
@@ -637,7 +646,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function checkCapturesOnBoard(boardState) {
     let toRemove = []
 
-    // Mevcut yakalama mantığı
+    // Existing capture logic
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x < 7; x++) {
         let cell = boardState[y][x]
@@ -668,8 +677,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Yeni yakalama mantığı: CTTC ve TCCT dizilimlerini kontrol et
-    // Yatay kontrol
+    // New capture logic: Check for CTTC and TCCT patterns
+    // Horizontal check
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x <= 7 - 4; x++) {
         let cell1 = boardState[y][x]
@@ -686,14 +695,14 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Aradaki iki taşı kaldır
+          // Remove the two middle pieces
           toRemove.push({ x: x + 1, y: y })
           toRemove.push({ x: x + 2, y: y })
         }
       }
     }
 
-    // Dikey kontrol
+    // Vertical check
     for (let x = 0; x < 7; x++) {
       for (let y = 0; y <= 7 - 4; y++) {
         let cell1 = boardState[y][x]
@@ -710,14 +719,14 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Aradaki iki taşı kaldır
+          // Remove the two middle pieces
           toRemove.push({ x: x, y: y + 1 })
           toRemove.push({ x: x, y: y + 2 })
         }
       }
     }
 
-    // Aynı taşı birden fazla kez kaldırmamak için benzersiz pozisyonları filtrele
+    // Filter unique positions to avoid removing the same piece multiple times
     let uniqueToRemove = []
     toRemove.forEach((pos) => {
       if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
@@ -725,7 +734,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     })
 
-    // Yakalanan parçaları kaldır
+    // Remove captured pieces
     uniqueToRemove.forEach((pos) => {
       boardState[pos.y][pos.x].piece = null
     })
@@ -756,23 +765,23 @@ document.addEventListener("DOMContentLoaded", () => {
       (aiPieces === 1 && humanPieces === 1)
     ) {
       gameEnded = true
-      alert("Oyun bitti. Berabere!")
+      alert("Game over. It's a draw!")
     } else if (aiPieces === 0) {
       gameEnded = true
-      alert("Tebrikler! Kazandınız!")
+      alert("Congratulations! You win!")
     } else if (humanPieces === 0) {
       gameEnded = true
-      alert("AI kazandı!")
+      alert("AI wins!")
     } else if (moveCount >= 50) {
       if (aiPieces === humanPieces) {
         gameEnded = true
-        alert("Oyun bitti. Berabere!")
+        alert("Game over. It's a draw!")
       } else if (aiPieces > humanPieces) {
         gameEnded = true
-        alert("AI kazandı!")
+        alert("AI wins!")
       } else {
         gameEnded = true
-        alert("Tebrikler! Kazandınız!")
+        alert("Congratulations! You win!")
       }
     }
   }
@@ -780,13 +789,13 @@ document.addEventListener("DOMContentLoaded", () => {
   restartButton.addEventListener("click", () => {
     moveHistory = []
     historyList.innerHTML = ""
-    currentPlayer = "human"
+    currentPlayer = "ai"
     moveCount = 0
     gameEnded = false
     initBoard()
-    humanMove()
+    // Game will start after clicking PLAY
 
-    // Arka plan müziğini yeniden başlat
+    // Restart background music
     if (!isMuted) {
       backgroundMusic.currentTime = 0
       backgroundMusic.play()
@@ -804,11 +813,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
-  initBoard()
-  humanMove()
+  // Event listener for the PLAY overlay
+  playOverlay.addEventListener("click", () => {
+    playOverlay.style.display = "none"
+    gameStarted = true
+    if (currentPlayer === "ai") {
+      aiMove()
+    } else {
+      humanMove()
+    }
 
-  // Oyun başladığında arka plan müziğini çal
-  if (!isMuted) {
-    backgroundMusic.play()
-  }
+    // Play background music when the game starts
+    if (!isMuted) {
+      backgroundMusic.play()
+    }
+  })
+
+  initBoard()
+  // Game will start after clicking PLAY
 })

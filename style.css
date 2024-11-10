@@ -14,17 +14,17 @@ body {
     justify-content: center;
     padding-top: 50px;
     min-height: 100vh;
-    background: linear-gradient(to bottom right, #dedede, #d5d5d5); /* Arka plan geçiş efekti */
+    background: linear-gradient(to bottom right, #dedede, #d5d5d5);
     width: 100%;
-    margin: 0; /* Varsayılan margin'i kaldırdım */
-    position: relative; /* Mute button için gerekli */
+    margin: 0;
+    position: relative;
 }
 
 .container {
     display: flex;
     gap: 10px;
     flex-direction: column;
-    align-items: center; /* İçeriği ortaladım */
+    align-items: center;
 }
 
 /* Mute button stili */
@@ -42,8 +42,8 @@ body {
 
 /* Başlık stilleri */
 h1 {
-    color: #4e54c8; /* Mor tonlar */
-    background: linear-gradient(to right, #8f94fb, #4e54c8); /* Başlığa geçişli renk */
+    color: #4e54c8;
+    background: linear-gradient(to right, #8f94fb, #4e54c8);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-size: 48px;
@@ -51,7 +51,7 @@ h1 {
 }
 
 h2 {
-    color: #ff6a88; /* Pembe tonlar */
+    color: #ff6a88;
     margin-top: 20px;
 }
 
@@ -66,8 +66,9 @@ h2 {
     grid-template-columns: repeat(7, 60px);
     grid-template-rows: repeat(7, 60px);
     gap: 2px;
-    justify-content: center; /* Tahtayı ortaladım */
+    justify-content: center;
     margin: 0 auto;
+    position: relative; /* For positioning the play overlay */
 }
 
 .cell {
@@ -86,11 +87,11 @@ h2 {
 
 .triangle {
     clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-    background-color: #e74c3c; /* Daha yumuşak kırmızı */
+    background-color: #e74c3c;
 }
 
 .circle {
-    background-color: #3498db; /* Daha yumuşak mavi */
+    background-color: #3498db;
     border-radius: 50%;
 }
 
@@ -144,9 +145,9 @@ h2 {
     margin: 0;
     padding: 0;
     list-style-type: none;
-    width: 450px; /* Sabit genişlik */
+    width: 450px;
     border: 1px solid #ccc;
-    background-color: #ffffffcc; /* Yarı saydam beyaz arka plan */
+    background-color: #ffffffcc;
 }
 
 #historyList .ai-move {
@@ -188,7 +189,6 @@ label {
     color: #333;
 }
 
-
 /* Position the rules button at the top left corner */
 #rulesButton {
     position: absolute;
@@ -209,24 +209,24 @@ label {
 
 /* Style for the modal */
 .modal {
-    display: none; /* Hidden by default */
+    display: none;
     position: fixed;
-    z-index: 20; /* Sit on top */
+    z-index: 20;
     left: 0;
     top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
 }
 
 /* Modal content */
 .modal-content {
     background-color: #fefefe;
-    margin: 2% auto; /* 10% from the top and centered */
+    margin: 2% auto;
     padding: 10px;
     border: 1px solid #888;
-    width: 50%; /* Could be more or less, depending on screen size */
+    width: 50%;
     position: relative;
 }
 
@@ -246,4 +246,25 @@ label {
     color: black;
     text-decoration: none;
     cursor: pointer;
+}
+
+/* Play overlay styles */
+#playOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+    cursor: pointer;
+}
+
+#playOverlay #playText {
+    font-size: 48px;
+    color: #fff;
+    font-weight: bold;
 }

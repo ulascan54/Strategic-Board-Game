@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Stratejik Tahta Oyunu</title>
+    <title>Strategic Board Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,21 +17,27 @@
     </div>
 
     <div class="container">
-        <h1>Stratejik Tahta Oyunu</h1>
+        <h1>Strategic Board Game</h1>
         <div id="game">
-            <div id="board"></div>
+            <div id="playOverlay">
+                <span id="playText">PLAY</span>
+            </div>
+            <div id="board">
+                <!-- Play Overlay -->
+     
+            </div>
             <div id="sidebar">
                 <div id="controls">
-                    <label for="difficulty">Zorluk Seviyesi:</label>
+                    <label for="difficulty">Difficulty Level:</label>
                     <select id="difficulty">
-                        <option value="1">Kolay</option>
-                        <option value="3">Orta</option>
-                        <option value="5">Zor</option>
+                        <option value="1">Easy</option>
+                        <option value="3">Medium</option>
+                        <option value="5">Hard</option>
                     </select>
-                    <button id="restart">Oyunu Yeniden Başlat</button>
+                    <button id="restart">Restart Game</button>
                 </div>
                 <div id="moveHistory">
-                    <h2>Hamle Geçmişi</h2>
+                    <h2>Move History</h2>
                     <ul id="historyList"></ul>
                 </div>
             </div>
@@ -43,7 +49,7 @@
         <div class="modal-content">
             <h2>Rules:</h2>
             <p>
-                Oyun alanının boyutu 7*7'dir. Üçgen sembolleri, yapay zeka tabanlı bir oyuncu olan Oyuncu 1'e ait taşlardır. Daire sembolleri ise insan oyuncu olan Oyuncu 2'ye ait taşlardır. Her oyuncunun dört taşı vardır. Oyun başladığında Oyuncu 1 ilk hamleyi yapar. Taşlar hem yatay hem de dikey yönlere hareket edebilir. Çapraz hareketlere izin verilmez. Oyuncunun birden fazla taşı varsa, oyuncu farklı taşlarla ardışık iki hamle yapmalıdır. Oyuncunun yalnızca bir taşı varsa, oyuncu yalnızca tek bir hamle yapmalıdır.
+                The game board size is 7x7. The triangle symbols are the pieces belonging to Player 1, who is AI-based. The circle symbols are the pieces belonging to Player 2, the human player. Each player has four pieces. When the game starts, Player 1 makes the first move. Pieces can move both horizontally and vertically. Diagonal movements are not allowed. If a player has more than one piece, they must make two consecutive moves with different pieces. If a player has only one piece, they can make only a single move.
             </p>
             <span id="closeRulesButton" class="close">&times;</span>
             <img src="rules.png" alt="Game Rules" style="width:80%;">
