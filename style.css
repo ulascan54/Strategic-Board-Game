@@ -5,6 +5,7 @@
 p {
     padding: 0;
     margin: 0;
+    text-align: justify;
 }
 
 body {
@@ -228,6 +229,7 @@ label {
     border: 1px solid #888;
     width: 50%;
     position: relative;
+    border-radius: 30px;
 }
 
 /* Close button */
@@ -267,4 +269,14 @@ label {
     font-size: 48px;
     color: #fff;
     font-weight: bold;
+}
+
+
+#linkedin{
+    text-decoration: none;
+    color: #0077b5;
+}
+
+#linkedin:hover b{
+    text-decoration: underline;
 }

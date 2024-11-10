@@ -36,7 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Sound files
   const backgroundMusic = new Audio("sound1.mp3")
   backgroundMusic.loop = true
-  backgroundMusic.volume = 0.01
+  backgroundMusic.volume = 0.2
+  backgroundMusic.playbackRate = 1.5
   const moveSound = new Audio("sound2.mp3")
   const captureSound = new Audio("sound3.mp3")
   const invalidMoveSound = new Audio("sound4.mp3")

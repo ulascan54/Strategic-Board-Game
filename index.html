@@ -18,6 +18,7 @@
 
     <div class="container">
         <h1>Strategic Board Game</h1>
+        <h2>Can you beat the AI?</h2>
         <div id="game">
             <div id="playOverlay">
                 <span id="playText">PLAY</span>
@@ -26,6 +27,7 @@
                 <!-- Play Overlay -->
      
             </div>
+            
             <div id="sidebar">
                 <div id="controls">
                     <label for="difficulty">Difficulty Level:</label>
@@ -36,23 +38,28 @@
                     </select>
                     <button id="restart">Restart Game</button>
                 </div>
+                
                 <div id="moveHistory">
                     <h2>Move History</h2>
                     <ul id="historyList"></ul>
                 </div>
+                
             </div>
         </div>
+        <a href="https://www.linkedin.com/in/ulascandemirbag/" id="linkedin" >Created by <b>Ulaş Can Demirbağ</b></a>
+
     </div>
 
     <!-- Rules Modal -->
     <div id="rulesModal" class="modal">
         <div class="modal-content">
-            <h2>Rules:</h2>
+            <h1>Game Rules</h1>
             <p>
                 The game board size is 7x7. The triangle symbols are the pieces belonging to Player 1, who is AI-based. The circle symbols are the pieces belonging to Player 2, the human player. Each player has four pieces. When the game starts, Player 1 makes the first move. Pieces can move both horizontally and vertically. Diagonal movements are not allowed. If a player has more than one piece, they must make two consecutive moves with different pieces. If a player has only one piece, they can make only a single move.
             </p>
+            <hr>
             <span id="closeRulesButton" class="close">&times;</span>
-            <img src="rules.png" alt="Game Rules" style="width:80%;">
+            <img src="rules.png" alt="Game Rules" style="width:100%;">
         
         </div>
     </div>
