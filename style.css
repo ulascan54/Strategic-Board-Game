@@ -1,0 +1,249 @@
+/* Genel stiller */
+* {
+    box-sizing: border-box;
+}
+p {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    padding-top: 50px;
+    min-height: 100vh;
+    background: linear-gradient(to bottom right, #dedede, #d5d5d5); /* Arka plan geçiş efekti */
+    width: 100%;
+    margin: 0; /* Varsayılan margin'i kaldırdım */
+    position: relative; /* Mute button için gerekli */
+}
+
+.container {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+    align-items: center; /* İçeriği ortaladım */
+}
+
+/* Mute button stili */
+#muteButton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+}
+
+#muteButton img {
+    width: 30px;
+    height: 30px;
+}
+
+/* Başlık stilleri */
+h1 {
+    color: #4e54c8; /* Mor tonlar */
+    background: linear-gradient(to right, #8f94fb, #4e54c8); /* Başlığa geçişli renk */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 48px;
+    margin: 0;
+}
+
+h2 {
+    color: #ff6a88; /* Pembe tonlar */
+    margin-top: 20px;
+}
+
+#game {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(7, 60px);
+    grid-template-rows: repeat(7, 60px);
+    gap: 2px;
+    justify-content: center; /* Tahtayı ortaladım */
+    margin: 0 auto;
+}
+
+.cell {
+    width: 60px;
+    height: 60px;
+    background-color: #f0d9b5;
+    position: relative;
+    border: 1px solid #b58863;
+}
+
+.piece {
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.triangle {
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background-color: #e74c3c; /* Daha yumuşak kırmızı */
+}
+
+.circle {
+    background-color: #3498db; /* Daha yumuşak mavi */
+    border-radius: 50%;
+}
+
+#sidebar {
+    margin-left: 20px;
+}
+
+#moveHistory {
+    text-align: left;
+    margin-top: 20px;
+}
+
+#moveHistory ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+#moveHistory li {
+    margin-bottom: 5px;
+}
+
+#controls {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#controls label, #controls select, #controls button {
+    margin: 5px;
+}
+
+/* Select ve buton stilleri */
+#controls select, #controls button {
+    padding: 5px 10px;
+    font-size: 16px;
+}
+
+.selected {
+    outline: 2px solid yellow;
+}
+
+.available {
+    background-color: #a9a9a9;
+}
+
+/* Hamle geçmişi stili */
+#historyList {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    width: 450px; /* Sabit genişlik */
+    border: 1px solid #ccc;
+    background-color: #ffffffcc; /* Yarı saydam beyaz arka plan */
+}
+
+#historyList .ai-move {
+    background-color: #e0f7fa;
+    padding: 5px;
+}
+
+#historyList .human-move {
+    background-color: #f1f8e9;
+    padding: 5px;
+}
+
+#historyList .last-move {
+    border-left: 4px solid #ff5722;
+}
+
+#historyList li {
+    margin-bottom: 2px;
+}
+
+/* Ek stil iyileştirmeleri */
+button {
+    background-color: #4e54c8;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #8f94fb;
+}
+
+select {
+    border: 1px solid #ccc;
+}
+
+label {
+    font-weight: bold;
+    color: #333;
+}
+
+
+/* Position the rules button at the top left corner */
+#rulesButton {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+}
+
+#openRulesButton {
+    border: none;
+    padding: 15px 32px;
+    border-radius: 20px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Style for the modal */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 20; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+}
+
+/* Modal content */
+.modal-content {
+    background-color: #fefefe;
+    margin: 2% auto; /* 10% from the top and centered */
+    padding: 10px;
+    border: 1px solid #888;
+    width: 50%; /* Could be more or less, depending on screen size */
+    position: relative;
+}
+
+/* Close button */
+.close {
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 25px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}

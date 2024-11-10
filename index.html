@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Stratejik Tahta Oyunu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Rules Button -->
+    <div id="rulesButton">
+        <button id="openRulesButton">Rules</button>
+    </div>
+
+    <!-- Mute Button -->
+    <div id="muteButton">
+        <img id="muteIcon" src="img1.png" alt="Mute Button">
+    </div>
+
+    <div class="container">
+        <h1>Stratejik Tahta Oyunu</h1>
+        <div id="game">
+            <div id="board"></div>
+            <div id="sidebar">
+                <div id="controls">
+                    <label for="difficulty">Zorluk Seviyesi:</label>
+                    <select id="difficulty">
+                        <option value="1">Kolay</option>
+                        <option value="3">Orta</option>
+                        <option value="5">Zor</option>
+                    </select>
+                    <button id="restart">Oyunu Yeniden Başlat</button>
+                </div>
+                <div id="moveHistory">
+                    <h2>Hamle Geçmişi</h2>
+                    <ul id="historyList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2>Rules:</h2>
+            <p>
+                Oyun alanının boyutu 7*7'dir. Üçgen sembolleri, yapay zeka tabanlı bir oyuncu olan Oyuncu 1'e ait taşlardır. Daire sembolleri ise insan oyuncu olan Oyuncu 2'ye ait taşlardır. Her oyuncunun dört taşı vardır. Oyun başladığında Oyuncu 1 ilk hamleyi yapar. Taşlar hem yatay hem de dikey yönlere hareket edebilir. Çapraz hareketlere izin verilmez. Oyuncunun birden fazla taşı varsa, oyuncu farklı taşlarla ardışık iki hamle yapmalıdır. Oyuncunun yalnızca bir taşı varsa, oyuncu yalnızca tek bir hamle yapmalıdır.
+            </p>
+            <span id="closeRulesButton" class="close">&times;</span>
+            <img src="rules.png" alt="Game Rules" style="width:80%;">
+        
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
