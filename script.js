@@ -1,4 +1,6 @@
+// add event listener for when the dom content is loaded
 document.addEventListener("DOMContentLoaded", () => {
+  // get html elements
   const boardElement = document.getElementById("board")
   const historyList = document.getElementById("historyList")
   const difficultySelect = document.getElementById("difficulty")
@@ -6,34 +8,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const muteButton = document.getElementById("muteButton")
   const muteIcon = document.getElementById("muteIcon")
 
-  // Get elements for the rules modal
   const openRulesButton = document.getElementById("openRulesButton")
   const rulesModal = document.getElementById("rulesModal")
   const closeRulesButton = document.getElementById("closeRulesButton")
 
-  // Get the play overlay
   const playOverlay = document.getElementById("playOverlay")
 
-  // Event listener to open the modal
+  const moveLimitInput = document.getElementById("moveLimitInput")
+  const setMoveLimitButton = document.getElementById("setMoveLimitButton")
+
+  // open rules modal when user clicks "open rules"
   openRulesButton.addEventListener("click", () => {
     rulesModal.style.display = "block"
   })
 
-  // Event listener to close the modal
+  // close rules modal when user clicks the close button
   closeRulesButton.addEventListener("click", () => {
     rulesModal.style.display = "none"
   })
 
-  // Close the modal when clicking outside of it
+  // if user clicks outside the rules modal, close it
   window.addEventListener("click", (event) => {
     if (event.target == rulesModal) {
       rulesModal.style.display = "none"
     }
   })
 
+  // sound control flag
   let isMuted = false
 
-  // Sound files
+  // load sounds for background music and actions
   const backgroundMusic = new Audio("sound1.mp3")
   backgroundMusic.loop = true
   backgroundMusic.volume = 0.2
@@ -42,31 +46,41 @@ document.addEventListener("DOMContentLoaded", () => {
   const captureSound = new Audio("sound3.mp3")
   const invalidMoveSound = new Audio("sound4.mp3")
 
+  // game variables
   let board = []
   let moveHistory = []
-  let currentPlayer = "ai" // AI starts first
+  let currentPlayer = "ai" // the ai starts first
   let moveCount = 0
   let gameEnded = false
   let gameStarted = false
 
+  // set default move limit
+  let moveLimit = 50
+
+  // directions for possible moves: up, right, down, left
   const directions = [
-    { x: 0, y: -1 }, // Up
-    { x: 1, y: 0 }, // Right
-    { x: 0, y: 1 }, // Down
-    { x: -1, y: 0 }, // Left
+    { x: 0, y: -1 }, // up
+    { x: 1, y: 0 },  // right
+    { x: 0, y: 1 },  // down
+    { x: -1, y: 0 }, // left
   ]
 
+  // function to initialize the board
   function initBoard() {
     board = []
     boardElement.innerHTML = ""
+
+    // create a 7x7 board
     for (let y = 0; y < 7; y++) {
       let row = []
       for (let x = 0; x < 7; x++) {
         let cell = {
           x: x,
           y: y,
-          piece: null, // 'triangle', 'circle' or null
+          piece: null, // no piece at start
         }
+
+        // create cell element in html
         let cellElement = document.createElement("div")
         cellElement.classList.add("cell")
         cellElement.dataset.x = x
@@ -77,21 +91,25 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       board.push(row)
     }
+
+    // place initial pieces
     initPieces()
 
-    // Show the PLAY overlay
+    // show overlay to start the game
     playOverlay.style.display = "flex"
     gameStarted = false
   }
 
+  // place the starting pieces for both ai and human
   function initPieces() {
-    // Initial positions of the pieces
+    // ai pieces (triangle)
     let aiPositions = [
       { x: 0, y: 0 },
       { x: 0, y: 2 },
       { x: 6, y: 4 },
       { x: 6, y: 6 },
     ]
+    // human pieces (circle)
     let humanPositions = [
       { x: 0, y: 6 },
       { x: 6, y: 0 },
@@ -99,15 +117,18 @@ document.addEventListener("DOMContentLoaded", () => {
       { x: 0, y: 4 },
     ]
 
+    // place ai pieces on the board
     aiPositions.forEach((pos, index) => {
       placePiece(pos.x, pos.y, "triangle", `ai_${index}`)
     })
 
+    // place human pieces on the board
     humanPositions.forEach((pos, index) => {
       placePiece(pos.x, pos.y, "circle", `human_${index}`)
     })
   }
 
+  // place a piece on the board at given x,y coordinates
   function placePiece(x, y, type, id) {
     let cell = board[y][x]
     cell.piece = type
@@ -119,6 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     cell.element.appendChild(pieceElement)
   }
 
+  // remove a piece from a cell
   function removePiece(x, y) {
     let cell = board[y][x]
     cell.piece = null
@@ -127,20 +149,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // move a piece from one cell to another
   function movePiece(fromX, fromY, toX, toY) {
     let pieceType = board[fromY][fromX].piece
     let pieceElement = board[fromY][fromX].element.firstChild
     let pieceId = pieceElement ? pieceElement.dataset.id : null
+
     removePiece(fromX, fromY)
     placePiece(toX, toY, pieceType, pieceId)
     addMoveToHistory(pieceType, fromX, fromY, toX, toY)
 
-    // Play moveSound when a piece is moved
+    // play move sound if not muted
     if (!isMuted) {
       moveSound.play()
     }
   }
 
+  // add move info to the history
   function addMoveToHistory(pieceType, fromX, fromY, toX, toY) {
     moveHistory.push({
       player: pieceType === "triangle" ? "AI" : "Human",
@@ -152,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pieceType === "triangle" ? "AI" : "Human"
     } moved from (${fromX},${fromY}) to (${toX},${toY})`
 
-    // Remove 'last-move' class from the previous last move
+    // remove "last-move" class from old last move
     const previousLastMove = historyList.querySelector(".last-move")
     if (previousLastMove) {
       previousLastMove.classList.remove("last-move")
@@ -161,28 +186,26 @@ document.addEventListener("DOMContentLoaded", () => {
     let li = document.createElement("li")
     li.textContent = moveText
 
-    // Add CSS class based on the player who made the move
+    // add class based on who moved
     if (pieceType === "triangle") {
       li.classList.add("ai-move")
     } else {
       li.classList.add("human-move")
     }
 
-    // Add 'last-move' class to highlight the last move
     li.classList.add("last-move")
-
     historyList.appendChild(li)
-
-    // Scroll the move history to the bottom
     historyList.scrollTop = historyList.scrollHeight
   }
 
+  // handle human's turn
   function humanMove() {
     let selectedPiece = null
     let availableMoves = []
     let humanMovesMade = 0
     let movedPieces = []
 
+    // deselect currently selected piece
     function deselectPiece() {
       if (selectedPiece) {
         let cell = board[selectedPiece.y][selectedPiece.x]
@@ -195,6 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // get available moves for a piece
     function getAvailableMoves(x, y) {
       let moves = []
       directions.forEach((dir) => {
@@ -207,18 +231,21 @@ document.addEventListener("DOMContentLoaded", () => {
       return moves
     }
 
+    // highlight available move cells
     function highlightAvailableMoves() {
       availableMoves.forEach((move) => {
         board[move.y][move.x].element.classList.add("available")
       })
     }
 
+    // unhighlight available move cells
     function unhighlightAvailableMoves() {
       availableMoves.forEach((move) => {
         board[move.y][move.x].element.classList.remove("available")
       })
     }
 
+    // handle cell click during human turn
     function handleCellClick(event) {
       if (gameEnded || !gameStarted) return
       let x = parseInt(event.currentTarget.dataset.x)
@@ -230,10 +257,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let pieceId = pieceElement.dataset.id
 
         if (selectedPiece && selectedPiece.x === x && selectedPiece.y === y) {
-          // Deselect the same piece if clicked again
+          // if same piece clicked twice, deselect
           deselectPiece()
         } else if (!movedPieces.includes(pieceId)) {
-          // Select a new piece
+          // select a new piece if it hasn't moved this turn
           deselectPiece()
           selectedPiece = { x: x, y: y, id: pieceId }
           if (pieceElement) {
@@ -242,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
           availableMoves = getAvailableMoves(x, y)
           highlightAvailableMoves()
         } else {
-          // This piece has already moved this turn
+          // can't move the same piece twice in one turn
           if (!isMuted) {
             invalidMoveSound.play()
           }
@@ -252,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedPiece &&
         cell.element.classList.contains("available")
       ) {
-        // Move the selected piece
+        // make the move if cell is available
         movePiece(selectedPiece.x, selectedPiece.y, x, y)
         movedPieces.push(selectedPiece.id)
         deselectPiece()
@@ -261,6 +288,8 @@ document.addEventListener("DOMContentLoaded", () => {
         humanMovesMade++
         checkGameEnd()
         if (gameEnded) return
+
+        // if human has more than one piece, needs 2 moves per turn, otherwise 1
         let humanPieces = getPlayerPieces("circle")
         let movesNeeded = humanPieces.length > 1 ? 2 : 1
         if (humanMovesMade >= movesNeeded) {
@@ -268,7 +297,6 @@ document.addEventListener("DOMContentLoaded", () => {
           detachEventListeners()
           aiMove()
         } else {
-          // Reset selection to allow the player to choose another piece
           deselectPiece()
         }
       } else {
@@ -276,6 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // attach event listeners for human turn
     function attachEventListeners() {
       board.forEach((row) => {
         row.forEach((cell) => {
@@ -284,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     }
 
+    // detach event listeners after turn ends
     function detachEventListeners() {
       board.forEach((row) => {
         row.forEach((cell) => {
@@ -295,6 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
     attachEventListeners()
   }
 
+  // handle ai's turn using minimax
   function aiMove() {
     if (!gameStarted) return
     let aiPieces = getPlayerPieces("triangle")
@@ -313,10 +344,9 @@ document.addEventListener("DOMContentLoaded", () => {
         movedPieces
       )
       if (bestMove && bestMove.move) {
-        // Ensure AI moves different pieces
         let pieceId = getPieceId(bestMove.move.from.x, bestMove.move.from.y)
         if (movedPieces.includes(pieceId)) {
-          // Find an alternative move with a different piece
+          // if that piece moved already this turn, try another move
           let alternativeMoves = getAllPossibleMoves(board, "triangle").filter(
             (move) =>
               !movedPieces.includes(getPieceId(move.from.x, move.from.y))
@@ -324,12 +354,12 @@ document.addEventListener("DOMContentLoaded", () => {
           if (alternativeMoves.length > 0) {
             bestMove.move = alternativeMoves[0]
           } else {
-            // No more moves this turn
             currentPlayer = "human"
             humanMove()
             return
           }
         }
+
         movePiece(
           bestMove.move.from.x,
           bestMove.move.from.y,
@@ -343,7 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (gameEnded) return
         movesMade++
         if (movesMade < movesNeeded) {
-          setTimeout(makeMove, 500) // Short delay between AI moves
+          setTimeout(makeMove, 500)
         } else {
           currentPlayer = "human"
           humanMove()
@@ -354,9 +384,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    setTimeout(makeMove, 500) // Start AI move after a short delay
+    setTimeout(makeMove, 500)
   }
 
+  // get piece id at x,y
   function getPieceId(x, y) {
     let cell = board[y][x]
     if (cell.element.firstChild) {
@@ -365,10 +396,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return null
   }
 
+  // check captures after each move
   function checkCaptures() {
     let toRemove = []
 
-    // Existing capture logic
+    // regular captures
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x < 7; x++) {
         let cell = board[y][x]
@@ -399,8 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // New capture logic: Check for CTTC and TCCT patterns
-    // Horizontal check
+    // horizontal special pattern
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x <= 7 - 4; x++) {
         let cell1 = board[y][x]
@@ -417,14 +448,13 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Remove the two middle pieces
           toRemove.push({ x: x + 1, y: y })
           toRemove.push({ x: x + 2, y: y })
         }
       }
     }
 
-    // Vertical check
+    // vertical special pattern
     for (let x = 0; x < 7; x++) {
       for (let y = 0; y <= 7 - 4; y++) {
         let cell1 = board[y][x]
@@ -441,14 +471,13 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Remove the two middle pieces
           toRemove.push({ x: x, y: y + 1 })
           toRemove.push({ x: x, y: y + 2 })
         }
       }
     }
 
-    // Filter unique positions to avoid removing the same piece multiple times
+    // remove duplicates
     let uniqueToRemove = []
     toRemove.forEach((pos) => {
       if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
@@ -456,21 +485,23 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     })
 
-    // Remove captured pieces
+    // remove captured pieces
     uniqueToRemove.forEach((pos) => {
       removePiece(pos.x, pos.y)
     })
 
-    // Play captureSound if pieces were captured
+    // play capture sound if needed
     if (uniqueToRemove.length > 0 && !isMuted) {
       captureSound.play()
     }
   }
 
+  // check if a cell is valid on the board
   function isValidCell(x, y) {
     return x >= 0 && x < 7 && y >= 0 && y < 7
   }
 
+  // get pieces belonging to a player
   function getPlayerPieces(pieceType) {
     let pieces = []
     for (let y = 0; y < 7; y++) {
@@ -483,6 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return pieces
   }
 
+  // evaluate the board for minimax
   function evaluateBoard(boardState) {
     let aiScore = 0
     let humanScore = 0
@@ -500,25 +532,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return aiScore - humanScore
   }
 
+  // evaluate a single piece position
   function evaluatePiece(cell, boardState, pieceType) {
-    let score = 10 // Base value for each piece
+    let score = 10 // base value for a piece
     let opponentType = pieceType === "triangle" ? "circle" : "triangle"
 
-    // Check the cells around the piece
     directions.forEach((dir) => {
       let x = cell.x + dir.x
       let y = cell.y + dir.y
       if (isValidCell(x, y)) {
         let neighbor = boardState[y][x]
         if (neighbor.piece === opponentType) {
-          // At risk if an opponent's piece is adjacent
+          // enemy neighbor reduces score
           score -= 2
         } else if (neighbor.piece === pieceType) {
-          // Safer if an ally is adjacent
+          // friendly neighbor slightly increases score
           score += 1
         }
       } else {
-        // Edge pieces might be riskier
+        // edge of board slightly reduces score
         score -= 1
       }
     })
@@ -526,6 +558,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return score
   }
 
+  // minimax function for choosing the best move
   function minimax(
     boardState,
     depth,
@@ -543,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
       isMaximizingPlayer ? "triangle" : "circle"
     )
 
-    // Filter to avoid moving the same piece twice
+    // filter moves to not move the same piece twice in one turn
     moves = moves.filter(
       (move) => !movedPieces.includes(getPieceId(move.from.x, move.from.y))
     )
@@ -576,7 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         alpha = Math.max(alpha, maxEval)
         if (beta <= alpha) {
-          break // Beta cutoff
+          break
         }
       }
       return { score: maxEval, move: bestMove }
@@ -602,13 +635,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         beta = Math.min(beta, minEval)
         if (beta <= alpha) {
-          break // Alpha cutoff
+          break
         }
       }
       return { score: minEval, move: bestMove }
     }
   }
 
+  // get all possible moves for a given piece type
   function getAllPossibleMoves(boardState, pieceType) {
     let moves = []
     boardState.forEach((row) => {
@@ -633,21 +667,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return moves
   }
 
+  // simulate a move on a given board state
   function makeMoveOnBoard(boardState, move) {
     let newBoard = boardState.map((row) => row.map((cell) => ({ ...cell })))
     let pieceType = newBoard[move.from.y][move.from.x].piece
     newBoard[move.from.y][move.from.x].piece = null
     newBoard[move.to.y][move.to.x].piece = pieceType
 
-    // Check for captures after the move
+    // after moving, check captures
     newBoard = checkCapturesOnBoard(newBoard)
     return newBoard
   }
 
+  // check captures on a simulated board state (for minimax)
   function checkCapturesOnBoard(boardState) {
     let toRemove = []
 
-    // Existing capture logic
+    // same logic as checkCaptures, but for a given board state
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x < 7; x++) {
         let cell = boardState[y][x]
@@ -678,8 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // New capture logic: Check for CTTC and TCCT patterns
-    // Horizontal check
+    // horizontal special pattern
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x <= 7 - 4; x++) {
         let cell1 = boardState[y][x]
@@ -696,14 +731,13 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Remove the two middle pieces
           toRemove.push({ x: x + 1, y: y })
           toRemove.push({ x: x + 2, y: y })
         }
       }
     }
 
-    // Vertical check
+    // vertical special pattern
     for (let x = 0; x < 7; x++) {
       for (let y = 0; y <= 7 - 4; y++) {
         let cell1 = boardState[y][x]
@@ -720,14 +754,13 @@ document.addEventListener("DOMContentLoaded", () => {
           cell2.piece === cell3.piece &&
           cell1.piece !== cell2.piece
         ) {
-          // Remove the two middle pieces
           toRemove.push({ x: x, y: y + 1 })
           toRemove.push({ x: x, y: y + 2 })
         }
       }
     }
 
-    // Filter unique positions to avoid removing the same piece multiple times
+    // remove duplicates
     let uniqueToRemove = []
     toRemove.forEach((pos) => {
       if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
@@ -735,7 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     })
 
-    // Remove captured pieces
+    // remove captured pieces
     uniqueToRemove.forEach((pos) => {
       boardState[pos.y][pos.x].piece = null
     })
@@ -743,6 +776,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return boardState
   }
 
+  // check if game is over
   function isGameOver(boardState) {
     let aiPieces = 0
     let humanPieces = 0
@@ -754,9 +788,10 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     })
 
-    return aiPieces === 0 || humanPieces === 0 || moveCount >= 50
+    return aiPieces === 0 || humanPieces === 0 || moveCount >= moveLimit
   }
 
+  // check end conditions after every move
   function checkGameEnd() {
     let aiPieces = getPlayerPieces("triangle").length
     let humanPieces = getPlayerPieces("circle").length
@@ -773,7 +808,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (humanPieces === 0) {
       gameEnded = true
       alert("AI wins!")
-    } else if (moveCount >= 50) {
+    } else if (moveCount >= moveLimit) {
       if (aiPieces === humanPieces) {
         gameEnded = true
         alert("Game over. It's a draw!")
@@ -787,22 +822,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // restart button: reset everything and start new game
   restartButton.addEventListener("click", () => {
     moveHistory = []
     historyList.innerHTML = ""
     currentPlayer = "ai"
     moveCount = 0
     gameEnded = false
+    // reset move limit to current input value if needed
+    moveLimit = parseInt(moveLimitInput.value) || 50
     initBoard()
-    // Game will start after clicking PLAY
 
-    // Restart background music
+    // replay music if not muted
     if (!isMuted) {
       backgroundMusic.currentTime = 0
       backgroundMusic.play()
     }
   })
 
+  // mute/unmute the sounds
   muteButton.addEventListener("click", () => {
     isMuted = !isMuted
     if (isMuted) {
@@ -814,7 +852,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
-  // Event listener for the PLAY overlay
+  // set move limit without restarting the game
+  setMoveLimitButton.addEventListener("click", () => {
+    let newLimit = parseInt(moveLimitInput.value)
+    if (newLimit > 0) {
+      moveLimit = newLimit
+      alert("Move limit set to " + moveLimit)
+      // no restart needed, just changes the limit going forward
+      checkGameEnd()
+    } else {
+      alert("Please enter a valid positive number for move limit.")
+    }
+  })
+
+  // when player clicks on the overlay, start the game
   playOverlay.addEventListener("click", () => {
     playOverlay.style.display = "none"
     gameStarted = true
@@ -824,12 +875,12 @@ document.addEventListener("DOMContentLoaded", () => {
       humanMove()
     }
 
-    // Play background music when the game starts
+    // play background music if not muted
     if (!isMuted) {
       backgroundMusic.play()
     }
   })
 
+  // start board at page load
   initBoard()
-  // Game will start after clicking PLAY
 })
