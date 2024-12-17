@@ -1,4 +1,3 @@
-/* Genel stiller */
 * {
     box-sizing: border-box;
 }
@@ -28,7 +27,6 @@ body {
     align-items: center;
 }
 
-/* Mute button stili */
 #muteButton {
     position: absolute;
     top: 10px;
@@ -41,7 +39,6 @@ body {
     height: 30px;
 }
 
-/* Başlık stilleri */
 h1 {
     color: #4e54c8;
     background: linear-gradient(to right, #8f94fb, #4e54c8);
@@ -69,7 +66,6 @@ h2 {
     gap: 2px;
     justify-content: center;
     margin: 0 auto;
-    position: relative; /* For positioning the play overlay */
 }
 
 .cell {
@@ -114,19 +110,18 @@ h2 {
     margin-bottom: 5px;
 }
 
-#controls {
+#controls, #moveLimitControls {
     margin-bottom: 20px;
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-#controls label, #controls select, #controls button {
+#controls label, #controls select, #controls button , #moveLimitControls label, #moveLimitControls input, #moveLimitControls button {
     margin: 5px;
 }
 
-/* Select ve buton stilleri */
-#controls select, #controls button {
+#controls select, #controls button, #moveLimitControls button , #moveLimitControls input {
     padding: 5px 10px;
     font-size: 16px;
 }
@@ -139,7 +134,6 @@ h2 {
     background-color: #a9a9a9;
 }
 
-/* Hamle geçmişi stili */
 #historyList {
     max-height: 200px;
     overflow-y: auto;
@@ -169,7 +163,6 @@ h2 {
     margin-bottom: 2px;
 }
 
-/* Ek stil iyileştirmeleri */
 button {
     background-color: #4e54c8;
     color: white;
@@ -190,7 +183,6 @@ label {
     color: #333;
 }
 
-/* Position the rules button at the top left corner */
 #rulesButton {
     position: absolute;
     top: 10px;
@@ -208,7 +200,6 @@ label {
     cursor: pointer;
 }
 
-/* Style for the modal */
 .modal {
     display: none;
     position: fixed;
@@ -221,7 +212,6 @@ label {
     background-color: rgba(0,0,0,0.5);
 }
 
-/* Modal content */
 .modal-content {
     background-color: #fefefe;
     margin: 2% auto;
@@ -232,7 +222,6 @@ label {
     border-radius: 30px;
 }
 
-/* Close button */
 .close {
     color: #aaa;
     position: absolute;
@@ -250,7 +239,6 @@ label {
     cursor: pointer;
 }
 
-/* Play overlay styles */
 #playOverlay {
     position: absolute;
     top: 0;
