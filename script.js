@@ -1,4 +1,3 @@
-// add event listener for when the dom content is loaded
 document.addEventListener("DOMContentLoaded", () => {
   // get html elements
   const boardElement = document.getElementById("board")
@@ -17,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const moveLimitInput = document.getElementById("moveLimitInput")
   const setMoveLimitButton = document.getElementById("setMoveLimitButton")
 
-  // open rules modal when user clicks "open rules"
+  // open rules modal when user clicks RULES button
   openRulesButton.addEventListener("click", () => {
     rulesModal.style.display = "block"
   })
@@ -27,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     rulesModal.style.display = "none"
   })
 
-  // if user clicks outside the rules modal, close it
+  // if user clicks outside the rules modal close it
   window.addEventListener("click", (event) => {
     if (event.target == rulesModal) {
       rulesModal.style.display = "none"
@@ -60,10 +59,88 @@ document.addEventListener("DOMContentLoaded", () => {
   // directions for possible moves: up, right, down, left
   const directions = [
     { x: 0, y: -1 }, // up
-    { x: 1, y: 0 },  // right
-    { x: 0, y: 1 },  // down
+    { x: 1, y: 0 }, // right
+    { x: 0, y: 1 }, // down
     { x: -1, y: 0 }, // left
   ]
+
+  // transposition table caching to avoid re-evaluating board states
+  const transpositionTable = {}
+
+  // function to hash the board for transposition caching
+  // we build a simple string based on positions of pieces
+  function hashBoard(boardState) {
+    let hash = ""
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        let piece = boardState[y][x].piece
+        hash += piece ? piece[0] : "_"
+      }
+    }
+    return hash
+  }
+
+  // improved evaluation function with additional heuristics
+  // more nuanced scoring (base points, center positioning, etc)
+  function improvedEvaluateBoard(boardState) {
+    let aiScore = 0
+    let humanScore = 0
+
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        let cell = boardState[y][x]
+        if (cell.piece === "triangle") {
+          // base value for ai piece
+          aiScore += 20
+          // small positional bonus for center proximity
+          let distCenter = Math.abs(x - 3) + Math.abs(y - 3)
+          aiScore += 6 - distCenter
+        } else if (cell.piece === "circle") {
+          // base value for human piece
+          humanScore += 20
+          // small positional bonus for center proximity
+          let distCenter = Math.abs(x - 3) + Math.abs(y - 3)
+          humanScore += 6 - distCenter
+        }
+      }
+    }
+
+    // score from perspective of ai
+    return aiScore - humanScore
+  }
+
+  // check if a cell is valid on the board
+  function isValidCell(x, y) {
+    return x >= 0 && x < 7 && y >= 0 && y < 7
+  }
+
+  // place the starting pieces for both ai and human
+  function initPieces() {
+    // ai pieces = triangle
+    let aiPositions = [
+      { x: 0, y: 0 },
+      { x: 0, y: 2 },
+      { x: 6, y: 4 },
+      { x: 6, y: 6 },
+    ]
+    // human pieces = circle
+    let humanPositions = [
+      { x: 0, y: 6 },
+      { x: 6, y: 0 },
+      { x: 6, y: 2 },
+      { x: 0, y: 4 },
+    ]
+
+    // place ai pieces on the board
+    aiPositions.forEach((pos, index) => {
+      placePiece(pos.x, pos.y, "triangle", `ai_${index}`)
+    })
+
+    // place human pieces on the board
+    humanPositions.forEach((pos, index) => {
+      placePiece(pos.x, pos.y, "circle", `human_${index}`)
+    })
+  }
 
   // function to initialize the board
   function initBoard() {
@@ -98,34 +175,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // show overlay to start the game
     playOverlay.style.display = "flex"
     gameStarted = false
-  }
-
-  // place the starting pieces for both ai and human
-  function initPieces() {
-    // ai pieces (triangle)
-    let aiPositions = [
-      { x: 0, y: 0 },
-      { x: 0, y: 2 },
-      { x: 6, y: 4 },
-      { x: 6, y: 6 },
-    ]
-    // human pieces (circle)
-    let humanPositions = [
-      { x: 0, y: 6 },
-      { x: 6, y: 0 },
-      { x: 6, y: 2 },
-      { x: 0, y: 4 },
-    ]
-
-    // place ai pieces on the board
-    aiPositions.forEach((pos, index) => {
-      placePiece(pos.x, pos.y, "triangle", `ai_${index}`)
-    })
-
-    // place human pieces on the board
-    humanPositions.forEach((pos, index) => {
-      placePiece(pos.x, pos.y, "circle", `human_${index}`)
-    })
   }
 
   // place a piece on the board at given x,y coordinates
@@ -198,195 +247,6 @@ document.addEventListener("DOMContentLoaded", () => {
     historyList.scrollTop = historyList.scrollHeight
   }
 
-  // handle human's turn
-  function humanMove() {
-    let selectedPiece = null
-    let availableMoves = []
-    let humanMovesMade = 0
-    let movedPieces = []
-
-    // deselect currently selected piece
-    function deselectPiece() {
-      if (selectedPiece) {
-        let cell = board[selectedPiece.y][selectedPiece.x]
-        if (cell.element.firstChild) {
-          cell.element.firstChild.classList.remove("selected")
-        }
-        unhighlightAvailableMoves()
-        selectedPiece = null
-        availableMoves = []
-      }
-    }
-
-    // get available moves for a piece
-    function getAvailableMoves(x, y) {
-      let moves = []
-      directions.forEach((dir) => {
-        let newX = x + dir.x
-        let newY = y + dir.y
-        if (isValidCell(newX, newY) && board[newY][newX].piece === null) {
-          moves.push({ x: newX, y: newY })
-        }
-      })
-      return moves
-    }
-
-    // highlight available move cells
-    function highlightAvailableMoves() {
-      availableMoves.forEach((move) => {
-        board[move.y][move.x].element.classList.add("available")
-      })
-    }
-
-    // unhighlight available move cells
-    function unhighlightAvailableMoves() {
-      availableMoves.forEach((move) => {
-        board[move.y][move.x].element.classList.remove("available")
-      })
-    }
-
-    // handle cell click during human turn
-    function handleCellClick(event) {
-      if (gameEnded || !gameStarted) return
-      let x = parseInt(event.currentTarget.dataset.x)
-      let y = parseInt(event.currentTarget.dataset.y)
-      let cell = board[y][x]
-
-      if (cell.piece === "circle") {
-        let pieceElement = cell.element.firstChild
-        let pieceId = pieceElement.dataset.id
-
-        if (selectedPiece && selectedPiece.x === x && selectedPiece.y === y) {
-          // if same piece clicked twice, deselect
-          deselectPiece()
-        } else if (!movedPieces.includes(pieceId)) {
-          // select a new piece if it hasn't moved this turn
-          deselectPiece()
-          selectedPiece = { x: x, y: y, id: pieceId }
-          if (pieceElement) {
-            pieceElement.classList.add("selected")
-          }
-          availableMoves = getAvailableMoves(x, y)
-          highlightAvailableMoves()
-        } else {
-          // can't move the same piece twice in one turn
-          if (!isMuted) {
-            invalidMoveSound.play()
-          }
-          alert("You cannot move the same piece twice in a single turn.")
-        }
-      } else if (
-        selectedPiece &&
-        cell.element.classList.contains("available")
-      ) {
-        // make the move if cell is available
-        movePiece(selectedPiece.x, selectedPiece.y, x, y)
-        movedPieces.push(selectedPiece.id)
-        deselectPiece()
-        checkCaptures()
-        moveCount++
-        humanMovesMade++
-        checkGameEnd()
-        if (gameEnded) return
-
-        // if human has more than one piece, needs 2 moves per turn, otherwise 1
-        let humanPieces = getPlayerPieces("circle")
-        let movesNeeded = humanPieces.length > 1 ? 2 : 1
-        if (humanMovesMade >= movesNeeded) {
-          currentPlayer = "ai"
-          detachEventListeners()
-          aiMove()
-        } else {
-          deselectPiece()
-        }
-      } else {
-        deselectPiece()
-      }
-    }
-
-    // attach event listeners for human turn
-    function attachEventListeners() {
-      board.forEach((row) => {
-        row.forEach((cell) => {
-          cell.element.addEventListener("click", handleCellClick)
-        })
-      })
-    }
-
-    // detach event listeners after turn ends
-    function detachEventListeners() {
-      board.forEach((row) => {
-        row.forEach((cell) => {
-          cell.element.removeEventListener("click", handleCellClick)
-        })
-      })
-    }
-
-    attachEventListeners()
-  }
-
-  // handle ai's turn using minimax
-  function aiMove() {
-    if (!gameStarted) return
-    let aiPieces = getPlayerPieces("triangle")
-    let movesNeeded = aiPieces.length > 1 ? 2 : 1
-    let movesMade = 0
-    let movedPieces = []
-
-    function makeMove() {
-      if (gameEnded || !gameStarted) return
-      let bestMove = minimax(
-        board,
-        parseInt(difficultySelect.value),
-        -Infinity,
-        Infinity,
-        true,
-        movedPieces
-      )
-      if (bestMove && bestMove.move) {
-        let pieceId = getPieceId(bestMove.move.from.x, bestMove.move.from.y)
-        if (movedPieces.includes(pieceId)) {
-          // if that piece moved already this turn, try another move
-          let alternativeMoves = getAllPossibleMoves(board, "triangle").filter(
-            (move) =>
-              !movedPieces.includes(getPieceId(move.from.x, move.from.y))
-          )
-          if (alternativeMoves.length > 0) {
-            bestMove.move = alternativeMoves[0]
-          } else {
-            currentPlayer = "human"
-            humanMove()
-            return
-          }
-        }
-
-        movePiece(
-          bestMove.move.from.x,
-          bestMove.move.from.y,
-          bestMove.move.to.x,
-          bestMove.move.to.y
-        )
-        movedPieces.push(pieceId)
-        checkCaptures()
-        moveCount++
-        checkGameEnd()
-        if (gameEnded) return
-        movesMade++
-        if (movesMade < movesNeeded) {
-          setTimeout(makeMove, 500)
-        } else {
-          currentPlayer = "human"
-          humanMove()
-        }
-      } else {
-        gameEnded = true
-        alert("AI cannot move. You win!")
-      }
-    }
-
-    setTimeout(makeMove, 500)
-  }
-
   // get piece id at x,y
   function getPieceId(x, y) {
     let cell = board[y][x]
@@ -396,7 +256,142 @@ document.addEventListener("DOMContentLoaded", () => {
     return null
   }
 
-  // check captures after each move
+  // get pieces belonging to a player
+  function getPlayerPieces(pieceType) {
+    let pieces = []
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        if (board[y][x].piece === pieceType) {
+          pieces.push({ x: x, y: y })
+        }
+      }
+    }
+    return pieces
+  }
+
+  // utility function to check if a move is a capture move for better move ordering
+  // if the 'to' cell had an opponent piece. consider it a direct capture
+  function isCaptureMove(boardState, move) {
+    let fromPiece = boardState[move.from.y][move.from.x].piece
+    let toPiece = boardState[move.to.y][move.to.x].piece
+    if (toPiece && toPiece !== fromPiece) {
+      return true
+    }
+    return false
+  }
+
+  // simulate a move on a given board state
+  function makeMoveOnBoard(boardState, move) {
+    // create a copy of the board
+    let newBoard = boardState.map((row) => row.map((cell) => ({ ...cell })))
+    let pieceType = newBoard[move.from.y][move.from.x].piece
+    newBoard[move.from.y][move.from.x].piece = null
+    newBoard[move.to.y][move.to.x].piece = pieceType
+
+    // after moving, check captures on this simulated board
+    newBoard = checkCapturesOnBoard(newBoard)
+    return newBoard
+  }
+
+  // check captures on a simulated board state for minimax
+  // same logic as checkCaptures but operates on a boardState object
+  function checkCapturesOnBoard(boardState) {
+    let toRemove = []
+
+    // regular captures
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        let cell = boardState[y][x]
+        if (cell.piece) {
+          let opponentPiece = cell.piece === "triangle" ? "circle" : "triangle"
+          directions.forEach((dir) => {
+            let currentX = x + dir.x
+            let currentY = y + dir.y
+
+            if (
+              isValidCell(currentX, currentY) &&
+              boardState[currentY][currentX].piece === opponentPiece
+            ) {
+              let beyondX = currentX + dir.x
+              let beyondY = currentY + dir.y
+
+              if (isValidCell(beyondX, beyondY)) {
+                let beyondCell = boardState[beyondY][beyondX]
+                if (beyondCell.piece === cell.piece) {
+                  toRemove.push({ x: currentX, y: currentY })
+                }
+              } else {
+                toRemove.push({ x: currentX, y: currentY })
+              }
+            }
+          })
+        }
+      }
+    }
+
+    // horizontal special pattern = triangle, circle, circle, triangle
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x <= 7 - 4; x++) {
+        let cell1 = boardState[y][x]
+        let cell2 = boardState[y][x + 1]
+        let cell3 = boardState[y][x + 2]
+        let cell4 = boardState[y][x + 3]
+        if (
+          cell1.piece &&
+          cell2.piece &&
+          cell3.piece &&
+          cell4.piece &&
+          cell1.piece !== cell2.piece &&
+          cell1.piece === cell4.piece &&
+          cell2.piece === cell3.piece &&
+          cell1.piece !== cell2.piece
+        ) {
+          toRemove.push({ x: x + 1, y: y })
+          toRemove.push({ x: x + 2, y: y })
+        }
+      }
+    }
+
+    // vertical special pattern = triangle, circle, circle, triangle
+    for (let x = 0; x < 7; x++) {
+      for (let y = 0; y <= 7 - 4; y++) {
+        let cell1 = boardState[y][x]
+        let cell2 = boardState[y + 1][x]
+        let cell3 = boardState[y + 2][x]
+        let cell4 = boardState[y + 3][x]
+        if (
+          cell1.piece &&
+          cell2.piece &&
+          cell3.piece &&
+          cell4.piece &&
+          cell1.piece !== cell2.piece &&
+          cell1.piece === cell4.piece &&
+          cell2.piece === cell3.piece &&
+          cell1.piece !== cell2.piece
+        ) {
+          toRemove.push({ x: x, y: y + 1 })
+          toRemove.push({ x: x, y: y + 2 })
+        }
+      }
+    }
+
+    // remove duplicates
+    let uniqueToRemove = []
+    toRemove.forEach((pos) => {
+      if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
+        uniqueToRemove.push(pos)
+      }
+    })
+
+    // remove captured pieces
+    uniqueToRemove.forEach((pos) => {
+      boardState[pos.y][pos.x].piece = null
+    })
+
+    return boardState
+  }
+
+  // check captures on the main 'board' real board in the DOM
   function checkCaptures() {
     let toRemove = []
 
@@ -431,7 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // horizontal special pattern
+    // horizontal special pattern = triangle, circle, circle, triangle
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x <= 7 - 4; x++) {
         let cell1 = board[y][x]
@@ -454,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // vertical special pattern
+    // vertical special pattern = triangle, circle, circle, triangle
     for (let x = 0; x < 7; x++) {
       for (let y = 0; y <= 7 - 4; y++) {
         let cell1 = board[y][x]
@@ -496,106 +491,79 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // check if a cell is valid on the board
-  function isValidCell(x, y) {
-    return x >= 0 && x < 7 && y >= 0 && y < 7
-  }
-
-  // get pieces belonging to a player
-  function getPlayerPieces(pieceType) {
-    let pieces = []
-    for (let y = 0; y < 7; y++) {
-      for (let x = 0; x < 7; x++) {
-        if (board[y][x].piece === pieceType) {
-          pieces.push({ x: x, y: y })
-        }
-      }
-    }
-    return pieces
-  }
-
-  // evaluate the board for minimax
-  function evaluateBoard(boardState) {
-    let aiScore = 0
-    let humanScore = 0
+  // check if game is over
+  function isGameOver(boardState) {
+    let aiPieces = 0
+    let humanPieces = 0
 
     boardState.forEach((row) => {
       row.forEach((cell) => {
-        if (cell.piece === "triangle") {
-          aiScore += evaluatePiece(cell, boardState, "triangle")
-        } else if (cell.piece === "circle") {
-          humanScore += evaluatePiece(cell, boardState, "circle")
-        }
+        if (cell.piece === "triangle") aiPieces++
+        if (cell.piece === "circle") humanPieces++
       })
     })
 
-    return aiScore - humanScore
+    // game is over if any side has 0 pieces or if reached moveLimit
+    return aiPieces === 0 || humanPieces === 0 || moveCount >= moveLimit
   }
 
-  // evaluate a single piece position
-  function evaluatePiece(cell, boardState, pieceType) {
-    let score = 10 // base value for a piece
-    let opponentType = pieceType === "triangle" ? "circle" : "triangle"
-
-    directions.forEach((dir) => {
-      let x = cell.x + dir.x
-      let y = cell.y + dir.y
-      if (isValidCell(x, y)) {
-        let neighbor = boardState[y][x]
-        if (neighbor.piece === opponentType) {
-          // enemy neighbor reduces score
-          score -= 2
-        } else if (neighbor.piece === pieceType) {
-          // friendly neighbor slightly increases score
-          score += 1
-        }
-      } else {
-        // edge of board slightly reduces score
-        score -= 1
-      }
-    })
-
-    return score
-  }
-
-  // minimax function for choosing the best move
-  function minimax(
+  // improved minimax using alpha-beta pruning + transposition table
+  // incorporate caching, move ordering (captures first, enhanced eval, etc)
+  function improvedMinimax(
     boardState,
     depth,
     alpha,
     beta,
-    isMaximizingPlayer,
+    isMaximizing,
     movedPieces = []
   ) {
-    if (depth === 0 || isGameOver(boardState)) {
-      return { score: evaluateBoard(boardState) }
+    // transposition table lookup
+    let stateKey = hashBoard(boardState) + "_" + depth + "_" + isMaximizing
+    if (transpositionTable[stateKey]) {
+      return transpositionTable[stateKey]
     }
 
-    let moves = getAllPossibleMoves(
-      boardState,
-      isMaximizingPlayer ? "triangle" : "circle"
-    )
+    // base condition
+    if (depth === 0 || isGameOver(boardState)) {
+      let evalScore = improvedEvaluateBoard(boardState)
+      return { score: evalScore }
+    }
 
-    // filter moves to not move the same piece twice in one turn
+    // get all possible moves for the current player
+    let currentPieceType = isMaximizing ? "triangle" : "circle"
+    let moves = getAllPossibleMoves(boardState, currentPieceType)
+
+    // filter out moves for pieces that have already moved this turn
     moves = moves.filter(
       (move) => !movedPieces.includes(getPieceId(move.from.x, move.from.y))
     )
 
+    // if no moves are available
     if (moves.length === 0) {
-      return { score: isMaximizingPlayer ? -Infinity : Infinity }
+      let extreme = isMaximizing ? -Infinity : Infinity
+      transpositionTable[stateKey] = { score: extreme }
+      return transpositionTable[stateKey]
     }
+
+    // move ordering: capture moves first
+    moves.sort((a, b) => {
+      let aIsCapture = isCaptureMove(boardState, a)
+      let bIsCapture = isCaptureMove(boardState, b)
+      // sort descending: 'true' moves to front
+      return (bIsCapture ? 1 : 0) - (aIsCapture ? 1 : 0)
+    })
 
     let bestMove = null
 
-    if (isMaximizingPlayer) {
+    if (isMaximizing) {
       let maxEval = -Infinity
+
       for (let move of moves) {
         let newBoard = makeMoveOnBoard(boardState, move)
-        let newMovedPieces = [
-          ...movedPieces,
-          getPieceId(move.from.x, move.from.y),
-        ]
-        let result = minimax(
+        let pieceId = getPieceId(move.from.x, move.from.y)
+        let newMovedPieces = [...movedPieces, pieceId]
+
+        let result = improvedMinimax(
           newBoard,
           depth - 1,
           alpha,
@@ -603,6 +571,7 @@ document.addEventListener("DOMContentLoaded", () => {
           false,
           newMovedPieces
         )
+
         if (result.score > maxEval) {
           maxEval = result.score
           bestMove = move
@@ -612,16 +581,17 @@ document.addEventListener("DOMContentLoaded", () => {
           break
         }
       }
-      return { score: maxEval, move: bestMove }
+      transpositionTable[stateKey] = { score: maxEval, move: bestMove }
+      return transpositionTable[stateKey]
     } else {
       let minEval = Infinity
+
       for (let move of moves) {
         let newBoard = makeMoveOnBoard(boardState, move)
-        let newMovedPieces = [
-          ...movedPieces,
-          getPieceId(move.from.x, move.from.y),
-        ]
-        let result = minimax(
+        let pieceId = getPieceId(move.from.x, move.from.y)
+        let newMovedPieces = [...movedPieces, pieceId]
+
+        let result = improvedMinimax(
           newBoard,
           depth - 1,
           alpha,
@@ -629,6 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
           true,
           newMovedPieces
         )
+
         if (result.score < minEval) {
           minEval = result.score
           bestMove = move
@@ -638,7 +609,8 @@ document.addEventListener("DOMContentLoaded", () => {
           break
         }
       }
-      return { score: minEval, move: bestMove }
+      transpositionTable[stateKey] = { score: minEval, move: bestMove }
+      return transpositionTable[stateKey]
     }
   }
 
@@ -667,128 +639,212 @@ document.addEventListener("DOMContentLoaded", () => {
     return moves
   }
 
-  // simulate a move on a given board state
-  function makeMoveOnBoard(boardState, move) {
-    let newBoard = boardState.map((row) => row.map((cell) => ({ ...cell })))
-    let pieceType = newBoard[move.from.y][move.from.x].piece
-    newBoard[move.from.y][move.from.x].piece = null
-    newBoard[move.to.y][move.to.x].piece = pieceType
-
-    // after moving, check captures
-    newBoard = checkCapturesOnBoard(newBoard)
-    return newBoard
+  // iterative deepening search
+  // call improvedMinimax repeatedly at increasing depths
+  function iterativeDeepeningSearch(
+    boardState,
+    maxDepth,
+    isMaximizing,
+    movedPieces = []
+  ) {
+    let bestResult = null
+    for (let d = 1; d <= maxDepth; d++) {
+      let result = improvedMinimax(
+        boardState,
+        d,
+        -Infinity,
+        Infinity,
+        isMaximizing,
+        movedPieces
+      )
+      bestResult = result
+    }
+    return bestResult
   }
 
-  // check captures on a simulated board state (for minimax)
-  function checkCapturesOnBoard(boardState) {
-    let toRemove = []
+  // handle ai's turn
+  function aiMove() {
+    if (!gameStarted) return
+    let aiPieces = getPlayerPieces("triangle")
+    let movesNeeded = aiPieces.length > 1 ? 2 : 1
+    let movesMade = 0
+    let movedPieces = []
 
-    // same logic as checkCaptures, but for a given board state
-    for (let y = 0; y < 7; y++) {
-      for (let x = 0; x < 7; x++) {
-        let cell = boardState[y][x]
-        if (cell.piece) {
-          let opponentPiece = cell.piece === "triangle" ? "circle" : "triangle"
-          directions.forEach((dir) => {
-            let currentX = x + dir.x
-            let currentY = y + dir.y
+    function makeMove() {
+      if (gameEnded || !gameStarted) return
 
-            if (
-              isValidCell(currentX, currentY) &&
-              boardState[currentY][currentX].piece === opponentPiece
-            ) {
-              let beyondX = currentX + dir.x
-              let beyondY = currentY + dir.y
+      // use iterative deepening to get best move up to the selected difficulty (depth)
+      let depth = parseInt(difficultySelect.value)
+      let bestResult = iterativeDeepeningSearch(board, depth, true, movedPieces)
+      let bestMove = bestResult.move
 
-              if (isValidCell(beyondX, beyondY)) {
-                let beyondCell = boardState[beyondY][beyondX]
-                if (beyondCell.piece === cell.piece) {
-                  toRemove.push({ x: currentX, y: currentY })
-                }
-              } else {
-                toRemove.push({ x: currentX, y: currentY })
-              }
-            }
-          })
+      if (bestMove) {
+        let pieceId = getPieceId(bestMove.from.x, bestMove.from.y)
+
+        // if that piece moved already this turn, try another if possible
+        if (movedPieces.includes(pieceId)) {
+          let alternativeMoves = getAllPossibleMoves(board, "triangle").filter(
+            (m) => !movedPieces.includes(getPieceId(m.from.x, m.from.y))
+          )
+          if (alternativeMoves.length > 0) {
+            bestMove = alternativeMoves[0]
+          } else {
+            currentPlayer = "human"
+            humanMove()
+            return
+          }
         }
+
+        // execute best move
+        movePiece(
+          bestMove.from.x,
+          bestMove.from.y,
+          bestMove.to.x,
+          bestMove.to.y
+        )
+        movedPieces.push(pieceId)
+        checkCaptures()
+        moveCount++
+        checkGameEnd()
+        if (gameEnded) return
+        movesMade++
+
+        // if ai needs to move again
+        if (movesMade < movesNeeded) {
+          setTimeout(makeMove, 500)
+        } else {
+          currentPlayer = "human"
+          humanMove()
+        }
+      } else {
+        // no move found, ai loses
+        gameEnded = true
+        alert("AI cannot move. You win!")
       }
     }
 
-    // horizontal special pattern
-    for (let y = 0; y < 7; y++) {
-      for (let x = 0; x <= 7 - 4; x++) {
-        let cell1 = boardState[y][x]
-        let cell2 = boardState[y][x + 1]
-        let cell3 = boardState[y][x + 2]
-        let cell4 = boardState[y][x + 3]
-        if (
-          cell1.piece &&
-          cell2.piece &&
-          cell3.piece &&
-          cell4.piece &&
-          cell1.piece !== cell2.piece &&
-          cell1.piece === cell4.piece &&
-          cell2.piece === cell3.piece &&
-          cell1.piece !== cell2.piece
-        ) {
-          toRemove.push({ x: x + 1, y: y })
-          toRemove.push({ x: x + 2, y: y })
-        }
-      }
-    }
-
-    // vertical special pattern
-    for (let x = 0; x < 7; x++) {
-      for (let y = 0; y <= 7 - 4; y++) {
-        let cell1 = boardState[y][x]
-        let cell2 = boardState[y + 1][x]
-        let cell3 = boardState[y + 2][x]
-        let cell4 = boardState[y + 3][x]
-        if (
-          cell1.piece &&
-          cell2.piece &&
-          cell3.piece &&
-          cell4.piece &&
-          cell1.piece !== cell2.piece &&
-          cell1.piece === cell4.piece &&
-          cell2.piece === cell3.piece &&
-          cell1.piece !== cell2.piece
-        ) {
-          toRemove.push({ x: x, y: y + 1 })
-          toRemove.push({ x: x, y: y + 2 })
-        }
-      }
-    }
-
-    // remove duplicates
-    let uniqueToRemove = []
-    toRemove.forEach((pos) => {
-      if (!uniqueToRemove.some((p) => p.x === pos.x && p.y === pos.y)) {
-        uniqueToRemove.push(pos)
-      }
-    })
-
-    // remove captured pieces
-    uniqueToRemove.forEach((pos) => {
-      boardState[pos.y][pos.x].piece = null
-    })
-
-    return boardState
+    // small delay for ai thinking :))
+    setTimeout(makeMove, 500)
   }
 
-  // check if game is over
-  function isGameOver(boardState) {
-    let aiPieces = 0
-    let humanPieces = 0
+  // handle human's turn
+  function humanMove() {
+    let selectedPiece = null
+    let availableMoves = []
+    let humanMovesMade = 0
+    let movedPieces = []
 
-    boardState.forEach((row) => {
-      row.forEach((cell) => {
-        if (cell.piece === "triangle") aiPieces++
-        if (cell.piece === "circle") humanPieces++
+    function deselectPiece() {
+      if (selectedPiece) {
+        let cell = board[selectedPiece.y][selectedPiece.x]
+        if (cell.element.firstChild) {
+          cell.element.firstChild.classList.remove("selected")
+        }
+        unhighlightAvailableMoves()
+        selectedPiece = null
+        availableMoves = []
+      }
+    }
+
+    function getAvailableMoves(x, y) {
+      let moves = []
+      directions.forEach((dir) => {
+        let newX = x + dir.x
+        let newY = y + dir.y
+        if (isValidCell(newX, newY) && board[newY][newX].piece === null) {
+          moves.push({ x: newX, y: newY })
+        }
       })
-    })
+      return moves
+    }
 
-    return aiPieces === 0 || humanPieces === 0 || moveCount >= moveLimit
+    function highlightAvailableMoves() {
+      availableMoves.forEach((move) => {
+        board[move.y][move.x].element.classList.add("available")
+      })
+    }
+
+    function unhighlightAvailableMoves() {
+      availableMoves.forEach((move) => {
+        board[move.y][move.x].element.classList.remove("available")
+      })
+    }
+
+    function handleCellClick(event) {
+      if (gameEnded || !gameStarted) return
+      let x = parseInt(event.currentTarget.dataset.x)
+      let y = parseInt(event.currentTarget.dataset.y)
+      let cell = board[y][x]
+
+      if (cell.piece === "circle") {
+        let pieceElement = cell.element.firstChild
+        let pieceId = pieceElement.dataset.id
+
+        if (selectedPiece && selectedPiece.x === x && selectedPiece.y === y) {
+          // if same piece clicked again, deselect
+          deselectPiece()
+        } else if (!movedPieces.includes(pieceId)) {
+          // select a new piece if it hasn't moved this turn
+          deselectPiece()
+          selectedPiece = { x: x, y: y, id: pieceId }
+          if (pieceElement) {
+            pieceElement.classList.add("selected")
+          }
+          availableMoves = getAvailableMoves(x, y)
+          highlightAvailableMoves()
+        } else {
+          // can't move the same piece twice in one turn
+          if (!isMuted) {
+            invalidMoveSound.play()
+          }
+          alert("You cannot move the same piece twice in a single turn.")
+        }
+      } else if (
+        selectedPiece &&
+        cell.element.classList.contains("available")
+      ) {
+        // move piece
+        movePiece(selectedPiece.x, selectedPiece.y, x, y)
+        movedPieces.push(selectedPiece.id)
+        deselectPiece()
+        checkCaptures()
+        moveCount++
+        humanMovesMade++
+        checkGameEnd()
+        if (gameEnded) return
+
+        // if human has more than one piece, needs 2 moves; otherwise 1
+        let humanPieces = getPlayerPieces("circle")
+        let movesNeeded = humanPieces.length > 1 ? 2 : 1
+        if (humanMovesMade >= movesNeeded) {
+          currentPlayer = "ai"
+          detachEventListeners()
+          aiMove()
+        } else {
+          deselectPiece()
+        }
+      } else {
+        deselectPiece()
+      }
+    }
+
+    function attachEventListeners() {
+      board.forEach((row) => {
+        row.forEach((cell) => {
+          cell.element.addEventListener("click", handleCellClick)
+        })
+      })
+    }
+
+    function detachEventListeners() {
+      board.forEach((row) => {
+        row.forEach((cell) => {
+          cell.element.removeEventListener("click", handleCellClick)
+        })
+      })
+    }
+
+    attachEventListeners()
   }
 
   // check end conditions after every move
@@ -829,6 +885,12 @@ document.addEventListener("DOMContentLoaded", () => {
     currentPlayer = "ai"
     moveCount = 0
     gameEnded = false
+
+    // clear transposition table if you want a fresh search cache
+    for (let key in transpositionTable) {
+      delete transpositionTable[key]
+    }
+
     // reset move limit to current input value if needed
     moveLimit = parseInt(moveLimitInput.value) || 50
     initBoard()
@@ -858,7 +920,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (newLimit > 0) {
       moveLimit = newLimit
       alert("Move limit set to " + moveLimit)
-      // no restart needed, just changes the limit going forward
       checkGameEnd()
     } else {
       alert("Please enter a valid positive number for move limit.")
