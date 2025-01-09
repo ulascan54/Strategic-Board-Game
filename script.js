@@ -83,30 +83,161 @@ document.addEventListener("DOMContentLoaded", () => {
   // improved evaluation function with additional heuristics
   // more nuanced scoring (base points, center positioning, etc)
   function improvedEvaluateBoard(boardState) {
-    let aiScore = 0
-    let humanScore = 0
-
+    let aiScore = 0;
+    let humanScore = 0;
+  
+    //track how many pieces each side has 
+    let aiPiecesCount = 0;       // count of AI (triangle) pieces
+    let humanPiecesCount = 0;    // count of Human (circle) pieces
+  
+    // loop over all cells on the board
     for (let y = 0; y < 7; y++) {
       for (let x = 0; x < 7; x++) {
-        let cell = boardState[y][x]
-        if (cell.piece === "triangle") {
-          // base value for ai piece
-          aiScore += 20
-          // small positional bonus for center proximity
-          let distCenter = Math.abs(x - 3) + Math.abs(y - 3)
-          aiScore += 6 - distCenter
-        } else if (cell.piece === "circle") {
-          // base value for human piece
-          humanScore += 20
-          // small positional bonus for center proximity
-          let distCenter = Math.abs(x - 3) + Math.abs(y - 3)
-          humanScore += 6 - distCenter
+        let cell = boardState[y][x];
+        let piece = cell.piece;
+  
+        if (piece === "triangle") {
+          // ----------------------
+          // AI Piece (triangle)
+          // ----------------------
+  
+          // (Existing) base value:
+          aiScore += 20;
+  
+          // (Existing) small positional bonus for center proximity:
+          let distCenter = Math.abs(x - 3) + Math.abs(y - 3);
+          aiScore += (6 - distCenter);
+  
+          // count the piece for a final piece-advantage bonus
+          aiPiecesCount++;
+  
+          // mobility bonus (count how many possible moves)
+          let mobility = 0;
+          for (let d of directions) {
+            let nx = x + d.x;
+            let ny = y + d.y;
+            if (isValidCell(nx, ny)) {
+              let neighbor = boardState[ny][nx].piece;
+              // If neighbor is empty or an opponent piece, that’s a valid move
+              if (neighbor === null || neighbor !== "triangle") {
+                mobility++;
+              }
+            }
+          }
+          aiScore += mobility * 1;
+  
+          // threatened penalty (check if it's immediately capturable)
+          let threatenedPenalty = 0;
+          for (let d of directions) {
+            let adjX = x + d.x;
+            let adjY = y + d.y;
+            if (isValidCell(adjX, adjY)) {
+              let adjPiece = boardState[adjY][adjX].piece;
+              // If adjacent is an opponent
+              if (adjPiece && adjPiece !== "triangle") {
+                let beyondX = adjX + d.x;
+                let beyondY = adjY + d.y;
+                if (isValidCell(beyondX, beyondY)) {
+                  let beyondPiece = boardState[beyondY][beyondX].piece;
+                  // If beyond is same type as adjPiece, capture is possible
+                  if (beyondPiece === adjPiece) {
+                    threatenedPenalty -= 10; // bigger penalty
+                  }
+                } else {
+                  // If out-of-bounds might allow an "edge" capture
+                  threatenedPenalty -= 5; // smaller penalty
+                }
+              }
+            }
+          }
+          aiScore += threatenedPenalty;
+  
+          // synergy bonus (for pieces adjacent to friends)
+          let synergyBonus = 0;
+          for (let d of directions) {
+            let friendX = x + d.x;
+            let friendY = y + d.y;
+            if (isValidCell(friendX, friendY)) {
+              let friendPiece = boardState[friendY][friendX].piece;
+              if (friendPiece === "triangle") {
+                synergyBonus += 2; // small bonus for friendly neighbor
+              }
+            }
+          }
+          aiScore += synergyBonus;
+  
+        } else if (piece === "circle") {
+  
+          // base value:
+          humanScore += 20;
+  
+          // small positional bonus for center proximity:
+          let distCenter = Math.abs(x - 3) + Math.abs(y - 3);
+          humanScore += (6 - distCenter);
+  
+          // count the piece for final piece-advantage bonus
+          humanPiecesCount++;
+  
+          // mobility bonus
+          let mobility = 0;
+          for (let d of directions) {
+            let nx = x + d.x;
+            let ny = y + d.y;
+            if (isValidCell(nx, ny)) {
+              let neighbor = boardState[ny][nx].piece;
+              // If neighbor is empty or an opponent piece
+              if (neighbor === null || neighbor !== "circle") {
+                mobility++;
+              }
+            }
+          }
+          humanScore += mobility * 1;
+  
+          // threatened penalty (if it's about to be captured)
+          let threatenedPenalty = 0;
+          for (let d of directions) {
+            let adjX = x + d.x;
+            let adjY = y + d.y;
+            if (isValidCell(adjX, adjY)) {
+              let adjPiece = boardState[adjY][adjX].piece;
+              if (adjPiece && adjPiece !== "circle") {
+                let beyondX = adjX + d.x;
+                let beyondY = adjY + d.y;
+                if (isValidCell(beyondX, beyondY)) {
+                  let beyondPiece = boardState[beyondY][beyondX].piece;
+                  if (beyondPiece === adjPiece) {
+                    threatenedPenalty -= 10;
+                  }
+                } else {
+                  threatenedPenalty -= 5;
+                }
+              }
+            }
+          }
+          humanScore += threatenedPenalty;
+  
+          // synergy bonus (friendly pieces together)
+          let synergyBonus = 0;
+          for (let d of directions) {
+            let friendX = x + d.x;
+            let friendY = y + d.y;
+            if (isValidCell(friendX, friendY)) {
+              let friendPiece = boardState[friendY][friendX].piece;
+              if (friendPiece === "circle") {
+                synergyBonus += 2;
+              }
+            }
+          }
+          humanScore += synergyBonus;
         }
       }
     }
-
-    // score from perspective of ai
-    return aiScore - humanScore
+  
+    // If AI is up by N pieces, that’s N * 50 points advantage
+    aiScore += (aiPiecesCount - humanPiecesCount) * 50;
+  
+    // Return final difference from AI perspective
+    return aiScore - humanScore;
   }
 
   // check if a cell is valid on the board
